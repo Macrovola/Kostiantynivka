@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Open-source GEOINT assessment of the line of contact at Kostiantynivka, Ukraine, built from Google Earth historical imagery.">
+<title>Kostiantynivka Line of Contact</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: an analyst's light table. One reading column, a wide imagery stage, and a sticky section rail. */
+:root {
+  --paper: #EDF0EA;
+  --surface: #F8F9F6;
+  --ink: #1B211D;
+  --muted: #586259;
+  --rule: #CBD2C9;
+  --ochre: #94540F;
+  --ochre-soft: #F1E2CC;
+  --sage: #3F6342;
+  --sage-soft: #DCE7DA;
+  --ash: #737A75;
+  --marker-ring: #FFFFFF;
+  --shadow: 0 1px 2px rgba(27,33,29,.08), 0 6px 18px rgba(27,33,29,.06);
+  --f-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --col: 44rem;
+  --wide: 68rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111512; --surface: #181E1A; --ink: #E1E6DF; --muted: #9BA79D; --rule: #2C352E;
+    --ochre: #E39D4C; --ochre-soft: #3A2A17; --sage: #8DB58F; --sage-soft: #1F3022; --ash: #8E9690;
+    --marker-ring: #111512; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #111512; --surface: #181E1A; --ink: #E1E6DF; --muted: #9BA79D; --rule: #2C352E;
+  --ochre: #E39D4C; --ochre-soft: #3A2A17; --sage: #8DB58F; --sage-soft: #1F3022; --ash: #8E9690;
+  --marker-ring: #111512; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 400 1rem/1.65 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+a { color: var(--ochre); text-underline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; border-radius: 3px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; line-height: 1.15; margin: 0; }
+h2 { font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem); }
+h3 { font-size: 1.15rem; }
+p { margin: 0; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 .75rem/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wrap { max-width: var(--wide); margin-inline: auto; }
+.col { max-width: var(--col); }
+
+/* Header */
+header.top { padding-block: 2.5rem 1.75rem; display: grid; gap: 1rem; }
+header.top h1 { font-size: clamp(2rem, 1.4rem + 3vw, 3.25rem); max-width: 18ch; }
+.lede { font-size: 1.125rem; color: var(--muted); max-width: 40rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem 1.75rem; margin: .5rem 0 0; padding: 0; }
+.meta div { display: grid; gap: .1rem; }
+.meta dt { font: 500 .7rem/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.meta dd { margin: 0; font: 500 .9rem/1.4 var(--f-mono); }
+
+/* BLUF */
+.bluf { border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: 1.25rem 1.25rem 1.1rem; display: grid; gap: .9rem; }
+.bluf .eyebrow { color: var(--ochre); }
+.judgment { display: grid; grid-template-columns: 1fr auto; gap: .5rem 1rem; align-items: start; }
+.judgment p { min-width: 0; }
+@media (max-width: 560px) { .judgment { grid-template-columns: 1fr; } }
+.pill { font: 500 .72rem/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: .4rem .55rem; border-radius: 999px; white-space: nowrap; justify-self: start; border: 1px solid transparent; }
+.pill.high { background: var(--sage-soft); color: var(--sage); border-color: color-mix(in srgb, var(--sage) 35%, transparent); }
+.pill.moderate { background: var(--ochre-soft); color: var(--ochre); border-color: color-mix(in srgb, var(--ochre) 35%, transparent); }
+.pill.rec { background: transparent; color: var(--muted); border-color: var(--rule); }
+
+/* Timeline */
+.timeline { margin-top: 1.75rem; }
+.tl-track { position: relative; height: 2.25rem; margin-top: .75rem; }
+.tl-line { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--rule); }
+.tl-gap { position: absolute; top: calc(50% - 7px); height: 14px; background: repeating-linear-gradient(135deg, var(--ochre-soft) 0 6px, transparent 6px 10px); border: 1px solid color-mix(in srgb, var(--ochre) 45%, transparent); border-radius: 3px; }
+.tl-dot { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--surface); border: 2px solid var(--ink); }
+.tl-dot.img { background: var(--ink); }
+.tl-labels { position: relative; height: 3.4rem; }
+.tl-label { position: absolute; top: 0; font-size: .78rem; line-height: 1.3; color: var(--muted); max-width: 9.5rem; }
+.tl-label b { display: block; font: 500 .78rem/1.3 var(--f-mono); color: var(--ink); }
+.tl-gap-label { position: absolute; top: -1.35rem; font: 500 .7rem/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ochre); white-space: nowrap; transform: translateX(-50%); }
+
+/* Section rail */
+nav.rail { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule); margin-top: 2rem; }
+nav.rail ul { list-style: none; display: flex; gap: .25rem; margin: 0 auto; padding: .5rem 0; overflow-x: auto; max-width: var(--wide); scrollbar-width: none; }
+nav.rail a { display: block; padding: .4rem .7rem; border-radius: 4px; text-decoration: none; color: var(--muted); font: 500 .85rem/1.2 var(--f-body); white-space: nowrap; }
+nav.rail a:hover, nav.rail a.on { color: var(--ink); background: var(--surface); }
+
+section { padding-block: 3rem 0; display: grid; gap: 1.25rem; scroll-margin-top: calc(3.5rem + env(safe-area-inset-top, 0px)); }
+.prose { display: grid; gap: .9rem; max-width: var(--col); }
+.prose p { color: var(--ink); }
+.note { font-size: .875rem; color: var(--muted); }
+
+/* Imagery stage */
+.stage { display: grid; gap: .75rem; }
+.controls { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; padding: 3px; background: var(--surface); flex-wrap: wrap; }
+.seg button, .chip, .btn {
+  font: 500 .85rem/1.2 var(--f-body); color: var(--muted); background: transparent; border: 0; border-radius: 4px; padding: .45rem .7rem; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn { border: 1px solid var(--rule); background: var(--surface); color: var(--ink); }
+.btn:hover, .chip:hover { color: var(--ink); }
+.toggle { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--muted); cursor: pointer; }
+.toggle input { accent-color: var(--ochre); width: 1rem; height: 1rem; }
+.frame { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule); background: var(--surface); box-shadow: var(--shadow); aspect-ratio: 1800 / 706; max-width: 100%; }
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity .25s ease; }
+.marker {
+  position: absolute; width: 1.6rem; height: 1.6rem; margin: -.8rem 0 0 -.8rem; border-radius: 50%;
+  background: var(--ochre); color: #fff; border: 2px solid var(--marker-ring); font: 600 .75rem/1 var(--f-mono);
+  display: grid; place-items: center; cursor: pointer; padding: 0; transition: transform .15s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,.45);
+}
+.marker:hover, .marker.hot { transform: scale(1.25); }
+.frame.clean .marker { display: none; }
+@media (max-width: 560px) { .marker { width: 1.25rem; height: 1.25rem; margin: -.625rem 0 0 -.625rem; font-size: .65rem; } }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .5rem 1.25rem; }
+.legend li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: start; font-size: .92rem; padding: .35rem .4rem; border-radius: 4px; cursor: default; }
+.legend li.hot { background: var(--surface); }
+.legend .n { width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--ochre); color: #fff; font: 600 .75rem/1 var(--f-mono); display: grid; place-items: center; }
+.caption { font-size: .85rem; color: var(--muted); }
+.caption b { font-family: var(--f-mono); font-weight: 500; color: var(--ink); }
+
+/* Figure tabs */
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.chip { border: 1px solid var(--rule); background: var(--surface); }
+.chip[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: var(--paper); box-shadow: inset 0 0 0 1px var(--ink); }
+.figtabs { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .5rem; }
+.figtab { text-align: left; border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; padding: .35rem; cursor: pointer; display: grid; gap: .35rem; color: var(--ink); font: inherit; }
+.figtab img { width: 100%; aspect-ratio: 16 / 7; object-fit: cover; border-radius: 3px; display: block; }
+.figtab span { font: 500 .78rem/1.3 var(--f-mono); padding: 0 .2rem .15rem; }
+.figtab[aria-selected="true"] { border-color: var(--ochre); box-shadow: inset 0 0 0 1px var(--ochre); }
+.figtab[hidden] { display: none !important; }
+.tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+.tag { font: 500 .7rem/1 var(--f-mono); letter-spacing: .05em; text-transform: uppercase; padding: .35rem .5rem; border-radius: 3px; background: var(--paper); border: 1px solid var(--rule); color: var(--muted); }
+.figbody { display: grid; gap: .75rem; max-width: var(--col); }
+
+/* Assessment */
+.judgments { display: grid; gap: 1rem; max-width: var(--col); }
+.jrow { display: grid; gap: .5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--rule); }
+.jrow:last-child { border-bottom: 0; padding-bottom: 0; }
+.meter { display: flex; align-items: center; gap: .6rem; }
+.meter .bars { display: grid; grid-template-columns: repeat(3, 2.25rem); gap: 3px; }
+.meter .bars i { height: 6px; border-radius: 2px; background: var(--rule); }
+.meter.high .bars i { background: var(--sage); }
+.meter.moderate .bars i:nth-child(-n+2) { background: var(--ochre); }
+.meter span { font: 500 .72rem/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; }
+.box { border: 1px solid var(--rule); border-radius: 6px; padding: 1rem 1.1rem; display: grid; gap: .5rem; align-content: start; background: var(--surface); }
+.box h3 { font-size: 1rem; }
+.box ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; font-size: .95rem; }
+
+/* Tasking table */
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 38rem; font-size: .93rem; }
+th, td { text-align: left; vertical-align: top; padding: .75rem .9rem; border-bottom: 1px solid var(--rule); }
+th { font: 500 .72rem/1.3 var(--f-mono); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); background: var(--paper); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* Context figures */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; }
+.stat { display: grid; gap: .25rem; }
+.stat b { font: 600 2rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.stat span { font-size: .9rem; color: var(--muted); }
+
+ol.refs { margin: 0; padding-left: 1.25rem; display: grid; gap: .6rem; font-size: .9rem; max-width: var(--col); }
+ol.refs a { overflow-wrap: anywhere; }
+footer { padding-block: 3rem 2.5rem; margin-top: 3rem; border-top: 1px solid var(--rule); display: grid; gap: .4rem; font-size: .82rem; color: var(--muted); }
+
+/* Full-size viewer */
+.viewer { position: fixed; inset: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 94%, transparent); display: grid; grid-template-rows: auto 1fr;
+  padding: calc(env(safe-area-inset-top, 0px) + .75rem) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + .75rem) max(16px, env(safe-area-inset-left, 0px)); gap: .5rem; }
+.viewer .bar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.viewer .bar p { font: 500 .8rem/1.3 var(--f-mono); min-width: 0; }
+.viewer .scroller { overflow: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.viewer .scroller img { display: block; width: max(100%, 1800px); max-width: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <p class="eyebrow">Open-source GEOINT assessment · Donetsk Oblast, Ukraine</p>
+    <h1>The line of contact at Kostiantynivka</h1>
+    <p class="lede">How the fighting reshaped the city's eastern approaches, read entirely from public satellite imagery, and where that imagery stops being able to tell us anything.</p>
+    <dl class="meta">
+      <div><dt>Area of interest</dt><dd>48.51°N, 37.76°E</dd></div>
+      <div><dt>Latest imagery</dt><dd>24 Sep 2024</dd></div>
+      <div><dt>Assessed</dt><dd>Nov 2026</dd></div>
+      <div><dt>Analyst</dt><dd>Derrick Sprague</dd></div>
+    </dl>
+  </header>
+
+  <div class="bluf col" role="region" aria-label="Bottom line up front">
+    <p class="eyebrow">Bottom line up front</p>
+    <div class="judgment"><p>By September 2024, fighting east of Kostiantynivka had turned cultivated farmland into abandoned, cratered and burned ground, with trench lines dug within roughly 50 m of residential streets.</p><span class="pill high">High confidence</span></div>
+    <div class="judgment"><p>The damage has likely intensified since, but Google Earth's archive lags about two years and cannot confirm current conditions.</p><span class="pill moderate">Moderate confidence</span></div>
+    <div class="judgment"><p>Real-time awareness of this sector requires tasked collection with frequent revisit.</p><span class="pill rec">Recommendation</span></div>
+  </div>
+
+  <div class="timeline col" aria-label="Imagery timeline">
+    <p class="eyebrow">What the archive covers</p>
+    <div class="tl-track">
+      <div class="tl-line"></div>
+      <div class="tl-gap" style="left:66.4%; right:0"></div>
+      <span class="tl-gap-label" style="left:83.2%">~2-year gap</span>
+      <span class="tl-dot img" style="left:0%" title="11 Jul 2020"></span>
+      <span class="tl-dot" style="left:25.7%" title="24 Feb 2022"></span>
+      <span class="tl-dot img" style="left:66.4%" title="24 Sep 2024"></span>
+      <span class="tl-dot" style="left:100%" title="Nov 2026"></span>
+    </div>
+    <div class="tl-labels">
+      <p class="tl-label" style="left:0"><b>Jul 2020</b>Baseline image</p>
+      <p class="tl-label" style="left:25.7%; transform:translateX(-50%); text-align:center"><b>Feb 2022</b>Full-scale invasion</p>
+      <p class="tl-label" style="left:66.4%; transform:translateX(-50%); text-align:center"><b>Sep 2024</b>Latest image</p>
+      <p class="tl-label" style="right:0; text-align:right"><b>Nov 2026</b>Assessment</p>
+    </div>
+  </div>
+</div>
+
+<nav class="rail" aria-label="Sections">
+  <ul>
+    <li><a href="#terrain">Terrain</a></li>
+    <li><a href="#change">Change and movement</a></li>
+    <li><a href="#assessment">Assessment</a></li>
+    <li><a href="#tasking">Filling the gaps</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <section id="terrain" aria-labelledby="h-terrain">
+    <p class="eyebrow">Terrain mapping</p>
+    <h2 id="h-terrain">Four years on the eastern approaches</h2>
+    <div class="prose">
+      <p>Kostiantynivka anchors the southern end of Ukraine's "Fortress Belt," the fortified cities Russia must take to complete its seizure of Donetsk Oblast. Russian forces continued offensive operations in and near the city through October 2026, and by March 2026 only about 2,000 of its 67,000 pre-war residents remained.</p>
+      <p>Dense housing fills the valley floor, an industrial zone follows the rail line, and fields, a reservoir and wooded ravines cover the rising ground to the east. That high ground offers observation but little concealment, so forces dig in along the urban edge and in the ravines, and fire concentrates there. Following Murdock and Clark (2015), the analysis is organized around GEOINT's three contributions to situational awareness: terrain mapping, detecting movement and identifying physical change.</p>
+    </div>
+    <div class="stage" id="compare">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Imagery date">
+          <button type="button" id="cmp-2020" aria-pressed="true">11 Jul 2020</button>
+          <button type="button" id="cmp-2024" aria-pressed="false">24 Sep 2024</button>
+        </div>
+        <div class="controls" style="gap:.75rem">
+          <label class="toggle"><input type="checkbox" id="cmp-ann" checked> Annotations</label>
+          <button type="button" class="btn" id="cmp-full">Full size</button>
+        </div>
+      </div>
+      <div class="frame" id="cmp-frame"><img id="cmp-img" src="img/fig1-2020.jpg" alt="Google Earth view of Kostiantynivka and its eastern approaches on 11 July 2020"></div>
+      <ol class="legend" id="cmp-legend"></ol>
+      <p class="caption" id="cmp-cap"></p>
+      <p class="note">The two frames cover the same area from slightly different camera positions. Compare land cover, not exact pixel positions.</p>
+    </div>
+  </section>
+
+  <section id="change" aria-labelledby="h-change">
+    <p class="eyebrow">Detected change and movement</p>
+    <h2 id="h-change">What the September 2024 imagery shows</h2>
+    <div class="controls">
+      <div class="chips" role="group" aria-label="Filter by situational awareness function">
+        <button type="button" class="chip" data-filter="all" aria-pressed="true">All figures</button>
+        <button type="button" class="chip" data-filter="terrain" aria-pressed="false">Terrain mapping</button>
+        <button type="button" class="chip" data-filter="movement" aria-pressed="false">Detecting movement</button>
+        <button type="button" class="chip" data-filter="change" aria-pressed="false">Physical change</button>
+      </div>
+    </div>
+    <div class="figtabs" role="tablist" aria-label="Figures" id="figtabs"></div>
+    <div class="stage">
+      <div class="controls">
+        <p class="eyebrow" id="fig-title" style="color:var(--ink)"></p>
+        <div class="controls" style="gap:.75rem">
+          <label class="toggle"><input type="checkbox" id="fig-ann" checked> Annotations</label>
+          <button type="button" class="btn" id="fig-full">Full size</button>
+        </div>
+      </div>
+      <div class="frame" id="fig-frame"><img id="fig-img" src="img/fig3-trench-burn.jpg" alt=""></div>
+      <ol class="legend" id="fig-legend"></ol>
+      <div class="figbody">
+        <div class="tags" id="fig-tags"></div>
+        <p id="fig-text"></p>
+        <p class="caption" id="fig-cap"></p>
+      </div>
+    </div>
+    <div class="prose">
+      <p class="note">One frame cannot measure crater density across the sector. University of Maryland researchers mapped about 2.5 million artillery and rocket impacts along the 2022 front lines, and an FAO-supported survey of four northern regions found more than 1.09 million craters in fields. Neither study covers Kostiantynivka, so both serve as evidence of a pattern, not measurements of this sector.</p>
+    </div>
+  </section>
+
+  <section id="assessment" aria-labelledby="h-assess">
+    <p class="eyebrow">Assessment</p>
+    <h2 id="h-assess">Judgments and what would change them</h2>
+    <div class="judgments">
+      <div class="jrow">
+        <div class="meter high" aria-label="High confidence"><div class="bars"><i></i><i></i><i></i></div><span>High confidence</span></div>
+        <p>By September 2024, the area east of Kostiantynivka had become abandoned, cratered and repeatedly burned ground, with earthworks reaching the city's residential edge.</p>
+      </div>
+      <div class="jrow">
+        <div class="meter moderate" aria-label="Moderate confidence"><div class="bars"><i></i><i></i><i></i></div><span>Moderate confidence</span></div>
+        <p>The damage has intensified since, based on reporting of continued fighting in and around the city. No public imagery available to me confirms it.</p>
+      </div>
+      <div class="jrow">
+        <div class="meter moderate" aria-label="Moderate confidence"><div class="bars"><i></i><i></i><i></i></div><span>Likely</span></div>
+        <p>The longest-lasting impact will fall on farmland, where unexploded ordnance and disturbed soil will keep fields out of production long after the fighting ends.</p>
+      </div>
+    </div>
+    <div class="split">
+      <div class="box">
+        <h3>Alternative explanation considered</h3>
+        <p>Farmers burning crop stubble can leave similar scars. Cultivation in the sector had stopped, and the burns sit beside trench lines and impact points, so combat-related ignition is the more likely cause.</p>
+      </div>
+      <div class="box">
+        <h3>Would lower confidence</h3>
+        <ul><li>New imagery showing renewed cultivation</li><li>No fresh burn scars or craters in later captures</li></ul>
+      </div>
+      <div class="box">
+        <h3>Would signal escalation</h3>
+        <ul><li>Earthworks extending into the residential grid, indicating the fighting had moved into the city itself</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="tasking" aria-labelledby="h-task">
+    <p class="eyebrow">Filling intelligence gaps through tasking</p>
+    <h2 id="h-task">What free imagery cannot answer</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">Gap</th><th scope="col">Collection that closes it</th><th scope="col">Who</th></tr></thead>
+        <tbody>
+          <tr><td>Currency</td><td>The newest public imagery is two years old. Commercial very-high-resolution collection with near-daily revisit would allow week-to-week change detection.</td><td>NGA, coordinating with the National Reconnaissance Office; Maxar, Planet</td></tr>
+          <tr><td>Weather</td><td>Radar is an all-weather change-detection tool and would track change through winter overcast.</td><td>Commercial SAR providers; Sentinel-1</td></tr>
+          <tr><td>Contamination</td><td>Imagery shows disturbed ground, not what is in the soil. Field sampling and crater-density maps would measure contamination and set clearance priorities.</td><td>Ukraine's environmental inspectorate; FAO; demining authorities</td></tr>
+          <tr><td>Ground truth</td><td>Geolocated social media from the sector, which Murdock and Clark identify as an emerging GEOINT source, plus independent damage assessments.</td><td>ODNI Open Source Enterprise; UNOSAT; UN Environment Programme</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="stats">
+      <div class="stat"><b class="mono" style="font-family:var(--f-display)">2.5 million</b><span>Artillery and rocket impacts mapped along the 2022 front lines (Duncan et al.)</span></div>
+      <div class="stat"><b style="font-family:var(--f-display)">1.09 million</b><span>Craters found in fields across four northern regions as of April 2026 (FAO survey)</span></div>
+      <div class="stat"><b style="font-family:var(--f-display)">~2 years</b><span>Lag between the latest public imagery of this sector and this assessment</span></div>
+    </div>
+  </section>
+
+  <section id="sources" aria-labelledby="h-src">
+    <p class="eyebrow">Sources</p>
+    <h2 id="h-src">References</h2>
+    <ol class="refs">
+      <li>Censor.net. (2026). <i>City that barely exists: "Khyzhak" unit showed neighbourhoods of Kostiantynivka burnt down by Russians.</i> <a href="https://censor.net/en/videonews/3609436/video-of-the-destruction-in-kostiantynivka-from-the-patrol-police-censor-net" target="_blank" rel="noopener">censor.net</a>. Ukrainian police reporting relayed by a Ukrainian outlet; population figures unverified.</li>
+      <li>Duncan, E. C., Skakun, S., &amp; Becker-Reshef, I. (n.d.). <i>Identification and mapping of missile craters and unexploded ordnance in agricultural fields in Ukraine using very high spatial resolution satellite imagery</i> [Presentation]. University of Maryland. <a href="https://uwnxt.nationalacademies.org/cdn/materials/9fba119a-8038-47df-bd13-4661c84ba26c" target="_blank" rel="noopener">nationalacademies.org</a></li>
+      <li>Interfax-Ukraine. (2026, April 9). <i>In northern Ukraine, more than 10,000 hectares of arable land damaged by war, with more than 1 mln craters recorded on fields – FAO.</i> <a href="https://en.interfax.com.ua/news/economic/1158093.html" target="_blank" rel="noopener">interfax.com.ua</a></li>
+      <li>Murdock, D., &amp; Clark, R. M. (2015). Geospatial intelligence. In M. M. Lowenthal &amp; R. M. Clark (Eds.), <i>The five disciplines of intelligence collection</i> (pp. 111–158). CQ Press.</li>
+      <li>Shymkiv, K., Sher, A., Neuman, A., &amp; Hird, K. (2026, October 15). <i>Russian offensive campaign assessment, October 15, 2026.</i> Institute for the Study of War &amp; AEI Critical Threats. <a href="https://www.criticalthreats.org/analysis/russian-offensive-campaign-assessment-october-15-2026" target="_blank" rel="noopener">criticalthreats.org</a>. Think tank drawing on open sources and commercial imagery.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p>Imagery © Google Earth and its data providers, captured from Google Earth historical imagery on the dates shown in each frame.</p>
+    <p>Built from publicly available imagery and open sources only. Analytic judgments are the author's own and do not represent any employer or agency.</p>
+  </footer>
+</main>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Full-size image">
+  <div class="bar"><p id="viewer-cap"></p><button type="button" class="btn" id="viewer-close">Close</button></div>
+  <div class="scroller"><img id="viewer-img" src="img/fig1-2020.jpg" alt=""></div>
+</div>
+
+<script>
+const COMPARE = {
+  "2020": { src: "img/fig1-2020.jpg", alt: "Google Earth view of Kostiantynivka and its eastern approaches on 11 July 2020",
+    cap: "<b>Figure 1.</b> Kostiantynivka and its eastern approaches before the full-scale invasion (Google Earth, 11 Jul 2020; scale bar 1 km).",
+    marks: [
+      [31, 59, "Dense single-family housing on the valley floor"],
+      [22, 44, "Industrial zone along the north–south rail line"],
+      [54, 40, "Reservoir and wooded ravines on the rising ground"],
+      [70, 53, "Cultivated fields in active use"]
+    ] },
+  "2024": { src: "img/fig2-2024.jpg", alt: "Google Earth view of the same area on 24 September 2024",
+    cap: "<b>Figure 2.</b> The same area on 24 Sep 2024: cultivation east of the city has ceased, and burn scars and active smoke are visible (Google Earth; scale bar 1 km).",
+    marks: [
+      [76, 44, "Former fields now uniform, unworked ground"],
+      [52, 47, "Dark burn scar at the city's eastern edge"],
+      [61, 63, "Active smoke from a fire at the time of capture"],
+      [52, 69, "Second burn scar beside the residential grid"]
+    ] }
+};
+
+const FIGS = [
+  { id: "f3", n: 3, src: "img/fig3-trench-burn.jpg", tags: ["terrain", "change"],
+    title: "Figure 3 · Trench lines and burn scar",
+    text: "Zigzag trench lines run along the city's southeastern edge beside a burn scar more than 250 m across. Smoke from a separate fire drifts across the ravine to the east.",
+    cap: "<b>Figure 3.</b> Trench lines along the southeastern edge of the city beside a burn scar more than 250 m across (Google Earth, 24 Sep 2024; scale bar 300 m).",
+    marks: [[32, 40, "Zigzag trench line along the urban edge"], [29, 75, "Burn scar more than 250 m across"], [60, 44, "Active smoke plume"], [55, 67, "Wooded ravine"]] },
+  { id: "f4", n: 4, src: "img/fig4-fire.jpg", tags: ["movement", "change"],
+    title: "Figure 4 · Fire in progress",
+    text: "A radial scorch pattern at the eastern end of the burn is consistent with an ordnance impact, and the burn extends west from that point. The impact likely ignited dry grass and an easterly wind spread the fire, the clearest movement signature in the imagery. The imagery cannot show who fired: smoke drift indicates wind direction, not the projectile's path.",
+    cap: "<b>Figure 4.</b> Active grass fire spreading west from a radial scorch pattern consistent with an ordnance impact (Google Earth, 24 Sep 2024; scale bar 90 m).",
+    marks: [[94, 33, "Radial scorch pattern consistent with an impact"], [85, 27, "Active fire front"], [42, 56, "Smoke drifting west-southwest with the wind"], [65, 73, "Ravine"]] },
+  { id: "f5", n: 5, src: "img/fig5-crater.jpg", tags: ["change"],
+    title: "Figure 5 · Impact crater",
+    text: "On the northeastern outskirts, a large impact crater with a ring of thrown-out soil sits in an open field beside a trench system along the main road. Smaller scattered depressions across the field are consistent with lighter impacts.",
+    cap: "<b>Figure 5.</b> Large impact crater with an ejecta ring and scattered smaller depressions beside a zigzag trench system on the city's northeastern outskirts (Google Earth, 24 Sep 2024; scale bar 90 m).",
+    marks: [[79, 19, "Large crater with an ejecta ring"], [60, 46, "Smaller scattered depressions"], [29, 63, "Zigzag trench system beside the main road"]] },
+  { id: "f6", n: 6, src: "img/fig6-edge.jpg", tags: ["terrain", "movement", "change"],
+    title: "Figure 6 · Fighting at the city's edge",
+    text: "A trench line runs within roughly 50 m of the easternmost houses, and curving vehicle tracks cross the field between the road and the trench, indicating repeated movement. Beyond it, a crater's lighter ring of ejecta, about 25 m across, stands out against the burn scar. Residential streets, earthworks and impact damage shared the same few hundred meters of ground.",
+    cap: "<b>Figure 6.</b> Trench line within roughly 50 m of the easternmost houses, with vehicle tracks and an impact crater in the burned field beyond (Google Earth, 24 Sep 2024; scale bar 60 m).",
+    marks: [[41, 69, "Easternmost houses"], [57, 53, "Trench line, roughly 50 m from the houses"], [47, 56, "Curving vehicle tracks"], [79, 40, "Crater with a ~25 m ejecta ring"], [78, 73, "Burned field"]] }
+];
+const TAGNAME = { terrain: "Terrain mapping", movement: "Detecting movement", change: "Physical change" };
+
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+function drawMarks(frame, legend, marks) {
+  frame.querySelectorAll(".marker").forEach(m => m.remove());
+  legend.innerHTML = "";
+  marks.forEach(([x, y, label], i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "marker"; b.textContent = i + 1;
+    b.style.left = x + "%"; b.style.top = y + "%";
+    b.setAttribute("aria-label", (i + 1) + ": " + label);
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="n">' + (i + 1) + '</span><span></span>';
+    li.lastChild.textContent = label;
+    const on = () => { b.classList.add("hot"); li.classList.add("hot"); };
+    const off = () => { b.classList.remove("hot"); li.classList.remove("hot"); };
+    [b, li].forEach(el => { el.addEventListener("mouseenter", on); el.addEventListener("mouseleave", off); });
+    b.addEventListener("focus", on); b.addEventListener("blur", off);
+    b.addEventListener("click", () => { li.scrollIntoView({ block: "nearest", behavior: "smooth" }); on(); setTimeout(off, 1400); });
+    frame.appendChild(b); legend.appendChild(li);
+  });
+}
+
+function swapImg(img, src, alt) {
+  if (img.getAttribute("src") === src) return;
+  img.style.opacity = 0;
+  const pre = new Image();
+  pre.onload = pre.onerror = () => { img.src = src; img.alt = alt; img.style.opacity = 1; };
+  pre.src = src;
+}
+
+/* Compare */
+const cmp = { frame: document.getElementById("cmp-frame"), img: document.getElementById("cmp-img"), legend: document.getElementById("cmp-legend"), cap: document.getElementById("cmp-cap"), key: "2020" };
+function setCompare(k) {
+  cmp.key = k; const d = COMPARE[k];
+  swapImg(cmp.img, d.src, d.alt); cmp.cap.innerHTML = d.cap; drawMarks(cmp.frame, cmp.legend, d.marks);
+  document.getElementById("cmp-2020").setAttribute("aria-pressed", k === "2020");
+  document.getElementById("cmp-2024").setAttribute("aria-pressed", k === "2024");
+}
+document.getElementById("cmp-2020").onclick = () => setCompare("2020");
+document.getElementById("cmp-2024").onclick = () => setCompare("2024");
+document.getElementById("cmp-ann").onchange = e => { cmp.frame.classList.toggle("clean", !e.target.checked); cmp.legend.hidden = !e.target.checked; };
+
+/* Figures */
+const tabs = document.getElementById("figtabs");
+const fig = { frame: document.getElementById("fig-frame"), img: document.getElementById("fig-img"), legend: document.getElementById("fig-legend"), current: FIGS[0] };
+FIGS.forEach(f => {
+  const t = document.createElement("button");
+  t.type = "button"; t.className = "figtab"; t.setAttribute("role", "tab"); t.dataset.id = f.id;
+  t.innerHTML = '<img src="' + f.src + '" alt="" loading="lazy"><span>Figure ' + f.n + '</span>';
+  t.onclick = () => setFig(f.id);
+  tabs.appendChild(t);
+});
+function setFig(id) {
+  const f = FIGS.find(x => x.id === id) || FIGS[0]; fig.current = f;
+  swapImg(fig.img, f.src, f.title);
+  document.getElementById("fig-title").textContent = f.title;
+  document.getElementById("fig-text").textContent = f.text;
+  document.getElementById("fig-cap").innerHTML = f.cap;
+  document.getElementById("fig-tags").innerHTML = f.tags.map(t => '<span class="tag">' + TAGNAME[t] + '</span>').join("");
+  drawMarks(fig.frame, fig.legend, f.marks);
+  tabs.querySelectorAll(".figtab").forEach(t => t.setAttribute("aria-selected", t.dataset.id === f.id));
+  store("kl-fig", f.id);
+}
+document.getElementById("fig-ann").onchange = e => { fig.frame.classList.toggle("clean", !e.target.checked); fig.legend.hidden = !e.target.checked; };
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => {
+  const k = c.dataset.filter;
+  document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x === c));
+  const visible = FIGS.filter(f => k === "all" || f.tags.includes(k));
+  tabs.querySelectorAll(".figtab").forEach(t => { t.hidden = !visible.some(f => f.id === t.dataset.id); });
+  if (!visible.includes(fig.current)) setFig(visible[0].id);
+});
+
+/* Full-size viewer */
+const viewer = document.getElementById("viewer"); let lastFocus = null;
+function openViewer(src, cap) {
+  lastFocus = document.activeElement;
+  document.getElementById("viewer-img").src = src;
+  const tmp = document.createElement("div"); tmp.innerHTML = cap;
+  document.getElementById("viewer-cap").textContent = tmp.textContent;
+  viewer.hidden = false; document.getElementById("viewer-close").focus();
+}
+function closeViewer() { viewer.hidden = true; if (lastFocus) lastFocus.focus(); }
+document.getElementById("viewer-close").onclick = closeViewer;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !viewer.hidden) closeViewer(); });
+document.getElementById("cmp-full").onclick = () => openViewer(COMPARE[cmp.key].src, COMPARE[cmp.key].cap);
+document.getElementById("fig-full").onclick = () => openViewer(fig.current.src, fig.current.cap);
+
+/* Section rail highlight */
+const links = [...document.querySelectorAll("nav.rail a")];
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id)); });
+}, { rootMargin: "-40% 0px -55% 0px" });
+document.querySelectorAll("main section").forEach(s => io.observe(s));
+
+setCompare("2020");
+setFig(store("kl-fig") || "f3");
+</script>
+
+</body>
+</html>
